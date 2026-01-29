@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Монополия со слотами</title>
+<style>
+  body { margin: 0; background: #fff; overflow: hidden; font-family: Arial; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// Авторазмер канваса
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// ---------- ИГРОКИ ----------
+const PLAYERS = 4;
+let playerPos = [0, 0, 0, 0];
+let currentPlayer = 0;
+let skipTurn = [false, false, false, false];
+const colors = ["green", "red", "blue", "gold"];
+
+// ---------- ПОЛЕ ----------
+const BOARD_SIZE = 50;
+const CELL = 60;
+const MARGIN = 80;
+let boardSide;
+
+// ---------- СЛОТЫ ----------
+const slotValues = ["+1 ход","+1 ход","+1 ход","+2 хода","+2 хода","-1 ход","-2 хода","Пропуск"];
+let currentSlot = Array(PLAYERS).fill("SPIN");
+
+// ---------- КНОПКА ----------
+const spinBtn = { w: 260, h: 70 };
+
+// ---------- ВСПОМОГАТЕЛЬНО ----------
+function drawRect(x,y,w,h,r=0){
+  ctx.beginPath();
+  if (r>0) ctx.roundRect(x,y,w,h,r);
+  else ctx.rect(x,y,w,h);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function getBoardCells() {
+  boardSide = Math.min(canvas.width - 400, canvas.height - 160);
+  const cellsPerSide = Math.floor(boardSide / CELL);
+  const cells = [];
+
+  for (let i=0;i<cellsPerSide;i++)
+    cells.push([MARGIN + i*CELL, canvas.height - MARGIN - CELL]);
+
+  for (let i=1;i<cellsPerSide-1;i++)
+    cells.push([MARGIN, canvas.height - MARGIN - CELL - i*CELL]);
+
+  for (let i=0;i<cellsPerSide;i++)
+    cells.push([MARGIN + i*CELL, canvas.height - MARGIN - CELL - (cellsPerSide-1)*CELL]);
+
+  for (let i=1;i<cellsPerSide-1;i++)
+    cells.push([MARGIN + (cellsPerSide-1)*CELL, canvas.height - MARGIN - CELL - (cellsPerSide-1-i)*CELL]);
+
+  return cells.slice(0, BOARD_SIZE);
+}
+
+function drawBoard() {
+  const cells = getBoardCells();
+  ctx.font = "14px Arial";
+
+  cells.forEach((c,i)=>{
+    ctx.fillStyle="#ddd";
+    ctx.strokeStyle="#000";
+    drawRect(c[0],c[1],CELL,CELL);
+
+    ctx.fillStyle="#000";
+    ctx.fillText(i, c[0]+CELL-18, c[1]+CELL-6);
+
+    for (let p=0;p<PLAYERS;p++) {
+      if (playerPos[p] === i) {
+        ctx.fillStyle = colors[p];
+        ctx.beginPath();
+        ctx.arc(c[0]+15+(p%2)*20, c[1]+15+Math.floor(p/2)*20, 8, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+function drawSlots() {
+  for (let i=0;i<PLAYERS;i++) {
+    const x = canvas.width - 360;
+    const y = 60 + i*170;
+
+    ctx.fillStyle="#f5f5f5";
+    ctx.strokeStyle="#000";
+    drawRect(x,y,300,140,12);
+
+    if (i === currentPlayer) {
+      ctx.strokeStyle="#0096ff";
+      ctx.lineWidth=4;
+      drawRect(x,y,300,140,12);
+      ctx.lineWidth=1;
+    }
+
+    ctx.fillStyle="#000";
+    ctx.font="24px Arial";
+    ctx.fillText(`Игрок ${i+1}`, x, y-10);
+
+    ctx.font="28px Arial";
+    ctx.fillText(currentSlot[i], x+80, y+80);
+  }
+}
+
+function drawButton() {
+  spinBtn.x = canvas.width - 330;
+  spinBtn.y = canvas.height - 110;
+
+  ctx.fillStyle="#008cff";
+  ctx.strokeStyle="#000";
+  drawRect(spinBtn.x, spinBtn.y, spinBtn.w, spinBtn.h, 14);
+
+  ctx.fillStyle="#fff";
+  ctx.font="32px Arial";
+  ctx.fillText("SPIN", spinBtn.x+85, spinBtn.y+45);
+}
+
+function animateSlot() {
+  const result = slotValues[Math.floor(Math.random()*slotValues.length)];
+  currentSlot[currentPlayer] = result;
+
+  if (result === "+1 ход") playerPos[currentPlayer]++;
+  if (result === "+2 хода") playerPos[currentPlayer]+=2;
+  if (result === "-1 ход") playerPos[currentPlayer]--;
+  if (result === "-2 хода") playerPos[currentPlayer]-=2;
+  if (result === "Пропуск") skipTurn[currentPlayer]=true;
+
+  if (playerPos[currentPlayer]<0) playerPos[currentPlayer]=0;
+  if (playerPos[currentPlayer]>=BOARD_SIZE-1) {
+    alert(`Игрок ${currentPlayer+1} победил!`);
+    location.reload();
+  }
+
+  currentPlayer = (currentPlayer+1)%PLAYERS;
+}
+
+// ---------- Клик по кнопке ----------
+canvas.addEventListener("click", e=>{
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left;
+  const y = e.clientY - r.top;
+
+  if (
+    x>spinBtn.x && x<spinBtn.x+spinBtn.w &&
+    y>spinBtn.y && y<spinBtn.y+spinBtn.h
+  ) {
+    if (!skipTurn[currentPlayer]) animateSlot();
+    else {
+      skipTurn[currentPlayer]=false;
+      currentPlayer=(currentPlayer+1)%PLAYERS;
+    }
+  }
+});
+
+// ---------- Главный цикл ----------
+function loop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBoard();
+  drawSlots();
+  drawButton();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
