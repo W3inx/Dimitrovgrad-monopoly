@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Монополия со слотами</title>
 <style>
-  body { margin: 0; background: #fff; overflow: hidden; font-family: Arial; }
+  body { margin: 0; background: #000; overflow: hidden; font-family: Arial; }
   canvas { display: block; }
 </style>
 </head>
@@ -15,10 +15,6 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
-// Фоновое изображение (можно заменить на свою картинку)
-const bgImage = new Image();
-bgImage.src = ""; // Например "background.jpg"
 
 // Авторазмер канваса
 function resize() {
@@ -79,11 +75,11 @@ function drawBoard() {
   ctx.font = "14px Arial";
 
   cells.forEach((c,i)=>{
-    ctx.fillStyle="#ddd";
-    ctx.strokeStyle="#000";
+    ctx.fillStyle="#444";
+    ctx.strokeStyle="#fff";
     drawRect(c[0],c[1],CELL,CELL);
 
-    ctx.fillStyle="#000";
+    ctx.fillStyle="#fff";
     ctx.fillText(i, c[0]+CELL-18, c[1]+CELL-6);
 
     for (let p=0;p<PLAYERS;p++) {
@@ -102,18 +98,18 @@ function drawSlots() {
     const x = canvas.width - 360;
     const y = 60 + i*170;
 
-    ctx.fillStyle="#f5f5f5";
-    ctx.strokeStyle="#000";
+    ctx.fillStyle="#222";
+    ctx.strokeStyle="#fff";
     drawRect(x,y,300,140,12);
 
     if (i === currentPlayer) {
-      ctx.strokeStyle="#0096ff";
+      ctx.strokeStyle="#00f";
       ctx.lineWidth=4;
       drawRect(x,y,300,140,12);
       ctx.lineWidth=1;
     }
 
-    ctx.fillStyle="#000";
+    ctx.fillStyle="#fff";
     ctx.font="24px Arial";
     ctx.fillText(`Игрок ${i+1}`, x, y-10);
 
@@ -127,7 +123,7 @@ function drawButton() {
   spinBtn.y = canvas.height - 110;
 
   ctx.fillStyle="#008cff";
-  ctx.strokeStyle="#000";
+  ctx.strokeStyle="#fff";
   drawRect(spinBtn.x, spinBtn.y, spinBtn.w, spinBtn.h, 14);
 
   ctx.fillStyle="#fff";
@@ -144,27 +140,28 @@ function animateSlot() {
 
   const startTime = Date.now();
   const duration = 1000; // 1 секунда анимации
-  const interval = 50;
+  const tempSlots = [];
 
-  const anim = setInterval(()=>{
+  for(let i=0;i<50;i++){
+    tempSlots.push(slotValues[Math.floor(Math.random()*slotValues.length)]);
+  }
+
+  function animate(){
     const elapsed = Date.now() - startTime;
-    ctx.clearRect(rectX, rectY, rectW, rectH);
+    ctx.fillStyle="#222";
+    ctx.fillRect(rectX, rectY, rectW, rectH);
 
-    // Рисуем фон слота
-    ctx.fillStyle="#f5f5f5";
-    ctx.strokeStyle="#000";
-    drawRect(rectX, rectY, rectW, rectH,12);
+    // Скроллим текст сверху вниз
+    for(let i=0;i<tempSlots.length;i++){
+      const yPos = rectY + (i*30 - (elapsed/10)% (tempSlots.length*30));
+      ctx.fillStyle="#fff";
+      ctx.font="28px Arial";
+      ctx.fillText(tempSlots[i], rectX+80, yPos);
+    }
 
-    ctx.fillStyle="#000";
-    ctx.font="28px Arial";
-
-    // Показываем случайный текст сверху вниз
-    const temp = slotValues[Math.floor(Math.random()*slotValues.length)];
-    const yOffset = (elapsed/interval % rectH) - 20;
-    ctx.fillText(temp, rectX+80, rectY + 80 + yOffset);
-
-    if (elapsed > duration) {
-      clearInterval(anim);
+    if(elapsed < duration){
+      requestAnimationFrame(animate);
+    } else {
       // Финальный результат
       const result = slotValues[Math.floor(Math.random()*slotValues.length)];
       currentSlot[currentPlayer] = result;
@@ -183,7 +180,8 @@ function animateSlot() {
 
       currentPlayer = (currentPlayer+1)%PLAYERS;
     }
-  }, interval);
+  }
+  animate();
 }
 
 // ---------- Клик по кнопке ----------
@@ -204,14 +202,15 @@ canvas.addEventListener("click", e=>{
 
 // ---------- Главный цикл ----------
 function loop() {
-  if(bgImage.src) ctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#000"; // черный фон
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
   drawBoard();
   drawSlots();
   drawButton();
   requestAnimationFrame(loop);
 }
 loop();
-
 </script>
 </body>
 </html>
