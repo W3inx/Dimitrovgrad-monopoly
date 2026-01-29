@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Монополия 12 полей</title>
+<title>Монополия 12 полей квадрат</title>
 <style>
   body { margin: 0; background: #000; overflow: hidden; font-family: Arial; }
   canvas { display: block; }
@@ -14,7 +14,10 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight;}
+function resize(){ 
+  canvas.width = window.innerWidth; 
+  canvas.height = window.innerHeight;
+}
 window.addEventListener("resize", resize);
 resize();
 
@@ -26,10 +29,9 @@ let skipTurn=[false,false,false,false];
 const colors=["green","red","blue","gold"];
 
 // ---------- ПОЛЕ ----------
-const TOTAL_CELLS=12; // теперь всего 12 больших полей
-const CELL_SIZE_MULTIPLIER=4; // увеличим размер клеток
-const CELL=60*CELL_SIZE_MULTIPLIER;
-const MARGIN=80;
+const TOTAL_CELLS=12; // всего 12 больших клеток
+let CELL_SIZE; // размер клеток
+const BOARD_MARGIN=80; // отступы от краев
 
 // ---------- СЛОТЫ ----------
 const slotValues=["+1 ход","+1 ход","+1 ход","+2 хода","+2 хода","-1 ход","-2 хода","Пропуск"];
@@ -47,49 +49,40 @@ function drawRect(x,y,w,h,r=0){
   ctx.stroke();
 }
 
-// --- вычисляем клетки доски ---
+// ---------- Вычисляем клетки для 12-польной квадратной доски ----------
 function getBoardCells(){
-  const boardSide=Math.min(canvas.width-400,canvas.height-160);
-  const cellsPerSide = Math.floor(TOTAL_CELLS/4); // по 3 клетки на сторону
+  const boardSide = Math.min(canvas.width - 2*BOARD_MARGIN, canvas.height - 2*BOARD_MARGIN);
+  CELL_SIZE = boardSide / 4; // делим квадрат на 4 сегмента на сторону
+
   const cells = [];
+  // Нижняя сторона (4 клетки)
+  for(let i=0;i<4;i++) cells.push([BOARD_MARGIN + i*CELL_SIZE, canvas.height-BOARD_MARGIN-CELL_SIZE]);
+  // Левая сторона (2 клетки)
+  for(let i=0;i<2;i++) cells.push([BOARD_MARGIN, canvas.height-BOARD_MARGIN-CELL_SIZE-(i+1)*CELL_SIZE]);
+  // Верхняя сторона (4 клетки)
+  for(let i=0;i<4;i++) cells.push([BOARD_MARGIN + i*CELL_SIZE, BOARD_MARGIN]);
+  // Правая сторона (2 клетки)
+  for(let i=0;i<2;i++) cells.push([BOARD_MARGIN + 3*CELL_SIZE, BOARD_MARGIN + (i+1)*CELL_SIZE]);
 
-  // Нижняя сторона
-  for(let i=0;i<cellsPerSide;i++)
-    cells.push([MARGIN+i*(boardSide/cellsPerSide), canvas.height-MARGIN-CELL]);
-  
-  // Левая сторона
-  for(let i=1;i<=cellsPerSide;i++)
-    cells.push([MARGIN, canvas.height-MARGIN-CELL - i*(boardSide/cellsPerSide)]);
-  
-  // Верхняя сторона
-  for(let i=0;i<cellsPerSide;i++)
-    cells.push([MARGIN+i*(boardSide/cellsPerSide), MARGIN]);
-  
-  // Правая сторона
-  for(let i=1;i<cellsPerSide;i++)
-    cells.push([MARGIN+boardSide-CELL, MARGIN+i*(boardSide/cellsPerSide)]);
-
-  return cells.slice(0,TOTAL_CELLS);
+  return cells;
 }
 
 // ---------- Отрисовка доски ----------
 function drawBoard(){
   const cells=getBoardCells();
   ctx.font="18px Arial";
-
   cells.forEach((c,i)=>{
-    ctx.fillStyle="#444";
-    ctx.strokeStyle="#fff";
-    drawRect(c[0],c[1],CELL,CELL);
+    ctx.fillStyle="#444"; ctx.strokeStyle="#fff";
+    drawRect(c[0],c[1],CELL_SIZE,CELL_SIZE);
 
     ctx.fillStyle="#fff";
-    ctx.fillText(i,c[0]+CELL-22,c[1]+CELL-10);
+    ctx.fillText(i, c[0]+CELL_SIZE-22, c[1]+CELL_SIZE-10);
 
     for(let p=0;p<PLAYERS;p++){
       if(playerPos[p]===i){
         ctx.fillStyle=colors[p];
         ctx.beginPath();
-        ctx.arc(c[0]+15+(p%2)*20,c[1]+15+Math.floor(p/2)*20,12,0,Math.PI*2);
+        ctx.arc(c[0]+CELL_SIZE/4 + (p%2)*CELL_SIZE/4, c[1]+CELL_SIZE/4 + Math.floor(p/2)*CELL_SIZE/4, 12,0,Math.PI*2);
         ctx.fill();
       }
     }
@@ -117,24 +110,20 @@ function drawButton(){
   ctx.fillStyle="#fff"; ctx.font="32px Arial"; ctx.fillText("SPIN",spinBtn.x+85,spinBtn.y+45);
 }
 
-// ---------- Анимация слота (3-4 значения, 3D-эффект) ----------
+// ---------- Анимация слота (3-4 значения) ----------
 function animateSlot(){
   const rectX=canvas.width-360;
   const rectY=60+currentPlayer*170;
-  const rectW=300;
-  const rectH=140;
-  const steps=50;
-  const visibleCount=4;
+  const rectW=300; const rectH=140;
+  const steps=50; const visibleCount=4;
   let slotQueue=[];
   for(let i=0;i<steps;i++) slotQueue.push(slotValues[Math.floor(Math.random()*slotValues.length)]);
   const finalResult=slotValues[Math.floor(Math.random()*slotValues.length)];
   let frame=0;
 
   function animate(){
-    ctx.fillStyle="#222";
-    ctx.fillRect(rectX,rectY,rectW,rectH);
-    ctx.font="28px Arial";
-    ctx.fillStyle="#fff";
+    ctx.fillStyle="#222"; ctx.fillRect(rectX,rectY,rectW,rectH);
+    ctx.font="28px Arial"; ctx.fillStyle="#fff";
 
     for(let i=0;i<visibleCount;i++){
       const val=slotQueue[(frame+i)%slotQueue.length];
@@ -180,7 +169,6 @@ function loop(){
   requestAnimationFrame(loop);
 }
 loop();
-
 </script>
 </body>
 </html>
