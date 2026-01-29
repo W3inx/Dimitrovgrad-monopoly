@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Монополия улитка + FINISH</title>
+<title>Монополия улитка + FINISH улучшенный</title>
 <style>
   body { margin: 0; background: #000; overflow: hidden; font-family: Arial; }
   canvas { display: block; }
@@ -29,11 +29,11 @@ let skipTurn = [false,false,false,false];
 const colors = ["green","red","blue","gold"];
 
 // ---------- ПОЛЕ ----------
-const TOTAL_CELLS = 12; // клетки по улитке
+const TOTAL_CELLS = 12; 
 let CELL_SIZE; 
 const BOARD_MARGIN = 80;
 let cells = [];
-let finishCell = {}; // для финальной клетки
+let finishCell = {}; 
 
 // ---------- СЛОТЫ ----------
 const slotValues=["+1 ход","+1 ход","+1 ход","+2 хода","+2 хода","-1 ход","-2 хода","Пропуск"];
@@ -54,10 +54,10 @@ function drawRect(x,y,w,h,r=0){
 // ---------- Вычисляем клетки по спирали улитка ----------
 function generateSpiralCells(){
   const boardSide = Math.min(canvas.width - 2*BOARD_MARGIN, canvas.height - 2*BOARD_MARGIN);
-  CELL_SIZE = boardSide / 4; // клетка большая
+  CELL_SIZE = boardSide / 4; 
   const startX = BOARD_MARGIN;
   const startY = BOARD_MARGIN;
-  const n = 4; // делим квадрат на 4 сегмента в ряд и колонку
+  const n = 4; 
   let x=startX, y=startY;
   let dx=CELL_SIZE, dy=0;
   let minX=startX, minY=startY, maxX=startX + 3*CELL_SIZE, maxY=startY + 3*CELL_SIZE;
@@ -89,32 +89,41 @@ function drawBoard(){
     for(let p=0;p<PLAYERS;p++){
       if(playerPos[p]===i){
         ctx.fillStyle=colors[p];
+        const cx=c[0]+CELL_SIZE/2;
+        const cy=c[1]+CELL_SIZE/2;
         ctx.beginPath();
-        ctx.arc(c[0]+CELL_SIZE/4 + (p%2)*CELL_SIZE/4, c[1]+CELL_SIZE/4 + Math.floor(p/2)*CELL_SIZE/4, 12,0,Math.PI*2);
+        ctx.arc(cx, cy, CELL_SIZE/5,0,Math.PI*2);
         ctx.fill();
+
+        // ---------- номер игрока ----------
+        ctx.fillStyle="#fff";
+        ctx.font=`${CELL_SIZE/5}px Arial`;
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.fillText(p+1, cx, cy);
       }
     }
   }
 
-  // ---------- FINISH клетка ----------
+  // ---------- FINISH клетка слева от квадрата ----------
   if(Object.keys(finishCell).length===0){
-    const last = cells[cells.length-1];
-    finishCell = {x:last[0]+CELL_SIZE + 20, y:last[1], w:CELL_SIZE, h:CELL_SIZE};
+    const first = cells[0];
+    finishCell = {x:first[0]-CELL_SIZE-20, y:first[1], w:CELL_SIZE, h:CELL_SIZE};
   }
   ctx.fillStyle="yellow"; ctx.strokeStyle="#fff";
   drawRect(finishCell.x, finishCell.y, finishCell.w, finishCell.h, 8);
-  ctx.fillStyle="#000"; ctx.font="20px Arial"; ctx.fillText("FINISH", finishCell.x+20, finishCell.y+CELL_SIZE/2);
+  ctx.fillStyle="#000"; ctx.font="20px Arial"; ctx.fillText("FINISH", finishCell.x+finishCell.w/4, finishCell.y+finishCell.h/2);
 
-  // Рисуем красный флажок с черной ножкой
-  const flagX = finishCell.x + finishCell.w - 20;
-  const flagY = finishCell.y + 10;
+  // ---------- Меньший красный флажок с черной ножкой ----------
+  const flagX = finishCell.x + finishCell.w - 15;
+  const flagY = finishCell.y + 5;
   ctx.fillStyle="black";
-  ctx.fillRect(flagX, flagY, 4, finishCell.h-20); // ножка
+  ctx.fillRect(flagX, flagY, 3, finishCell.h-10); // ножка
   ctx.fillStyle="red";
   ctx.beginPath();
-  ctx.moveTo(flagX+2, flagY);
-  ctx.lineTo(flagX+2, flagY+20);
-  ctx.lineTo(flagX+20, flagY+10);
+  ctx.moveTo(flagX+1.5, flagY);
+  ctx.lineTo(flagX+1.5, flagY+15);
+  ctx.lineTo(flagX+15, flagY+7.5);
   ctx.closePath();
   ctx.fill();
 }
@@ -170,7 +179,6 @@ function animateSlot(){
       if(finalResult==="-1 ход") playerPos[currentPlayer]--;
       if(finalResult==="-2 хода") playerPos[currentPlayer]-=2;
       if(finalResult==="Пропуск") skipTurn[currentPlayer]=true;
-      if(playerPos[currentPlayer]<0) playerPos[currentPlayer]=0;
       if(playerPos[currentPlayer]>=TOTAL_CELLS){
         alert(`Игрок ${currentPlayer+1} победил!`);
         location.reload();
@@ -202,4 +210,3 @@ loop();
 </script>
 </body>
 </html>
-
