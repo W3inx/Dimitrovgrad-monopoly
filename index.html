@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Монополия со слотами 3D</title>
+<title>Монополия 12 полей</title>
 <style>
   body { margin: 0; background: #000; overflow: hidden; font-family: Arial; }
   canvas { display: block; }
@@ -26,8 +26,9 @@ let skipTurn=[false,false,false,false];
 const colors=["green","red","blue","gold"];
 
 // ---------- ПОЛЕ ----------
-const BOARD_SIZE=50;
-const CELL=60;
+const TOTAL_CELLS=12; // теперь всего 12 больших полей
+const CELL_SIZE_MULTIPLIER=4; // увеличим размер клеток
+const CELL=60*CELL_SIZE_MULTIPLIER;
 const MARGIN=80;
 
 // ---------- СЛОТЫ ----------
@@ -46,48 +47,69 @@ function drawRect(x,y,w,h,r=0){
   ctx.stroke();
 }
 
+// --- вычисляем клетки доски ---
 function getBoardCells(){
   const boardSide=Math.min(canvas.width-400,canvas.height-160);
-  const cellsPerSide=Math.floor(boardSide/CELL);
-  const cells=[];
-  for(let i=0;i<cellsPerSide;i++) cells.push([MARGIN+i*CELL,canvas.height-MARGIN-CELL]);
-  for(let i=1;i<cellsPerSide-1;i++) cells.push([MARGIN,canvas.height-MARGIN-CELL-i*CELL]);
-  for(let i=0;i<cellsPerSide;i++) cells.push([MARGIN+i*CELL,canvas.height-MARGIN-CELL-(cellsPerSide-1)*CELL]);
-  for(let i=1;i<cellsPerSide-1;i++) cells.push([MARGIN+(cellsPerSide-1)*CELL,canvas.height-MARGIN-CELL-(cellsPerSide-1-i)*CELL]);
-  return cells.slice(0,BOARD_SIZE);
+  const cellsPerSide = Math.floor(TOTAL_CELLS/4); // по 3 клетки на сторону
+  const cells = [];
+
+  // Нижняя сторона
+  for(let i=0;i<cellsPerSide;i++)
+    cells.push([MARGIN+i*(boardSide/cellsPerSide), canvas.height-MARGIN-CELL]);
+  
+  // Левая сторона
+  for(let i=1;i<=cellsPerSide;i++)
+    cells.push([MARGIN, canvas.height-MARGIN-CELL - i*(boardSide/cellsPerSide)]);
+  
+  // Верхняя сторона
+  for(let i=0;i<cellsPerSide;i++)
+    cells.push([MARGIN+i*(boardSide/cellsPerSide), MARGIN]);
+  
+  // Правая сторона
+  for(let i=1;i<cellsPerSide;i++)
+    cells.push([MARGIN+boardSide-CELL, MARGIN+i*(boardSide/cellsPerSide)]);
+
+  return cells.slice(0,TOTAL_CELLS);
 }
 
+// ---------- Отрисовка доски ----------
 function drawBoard(){
   const cells=getBoardCells();
-  ctx.font="14px Arial";
+  ctx.font="18px Arial";
+
   cells.forEach((c,i)=>{
     ctx.fillStyle="#444";
     ctx.strokeStyle="#fff";
     drawRect(c[0],c[1],CELL,CELL);
+
     ctx.fillStyle="#fff";
-    ctx.fillText(i,c[0]+CELL-18,c[1]+CELL-6);
+    ctx.fillText(i,c[0]+CELL-22,c[1]+CELL-10);
+
     for(let p=0;p<PLAYERS;p++){
       if(playerPos[p]===i){
         ctx.fillStyle=colors[p];
         ctx.beginPath();
-        ctx.arc(c[0]+15+(p%2)*20,c[1]+15+Math.floor(p/2)*20,8,0,Math.PI*2);
+        ctx.arc(c[0]+15+(p%2)*20,c[1]+15+Math.floor(p/2)*20,12,0,Math.PI*2);
         ctx.fill();
       }
     }
   });
 }
 
+// ---------- Слоты ----------
 function drawSlots(){
   for(let i=0;i<PLAYERS;i++){
     const x=canvas.width-360;
     const y=60+i*170;
     ctx.fillStyle="#222"; ctx.strokeStyle="#fff"; drawRect(x,y,300,140,12);
+
     if(i===currentPlayer){ ctx.strokeStyle="#00f"; ctx.lineWidth=4; drawRect(x,y,300,140,12); ctx.lineWidth=1;}
     ctx.fillStyle="#fff"; ctx.font="24px Arial"; ctx.fillText(`Игрок ${i+1}`,x,y-10);
     ctx.font="28px Arial"; ctx.fillText(currentSlot[i],x+80,y+80);
   }
 }
 
+// ---------- Кнопка ----------
 function drawButton(){
   spinBtn.x=canvas.width-330;
   spinBtn.y=canvas.height-110;
@@ -95,47 +117,42 @@ function drawButton(){
   ctx.fillStyle="#fff"; ctx.font="32px Arial"; ctx.fillText("SPIN",spinBtn.x+85,spinBtn.y+45);
 }
 
-// ---------- Анимация слота с 3-4 значениями и эффектом вращения ----------
+// ---------- Анимация слота (3-4 значения, 3D-эффект) ----------
 function animateSlot(){
   const rectX=canvas.width-360;
   const rectY=60+currentPlayer*170;
   const rectW=300;
   const rectH=140;
-
-  const steps=50; // количество шагов анимации
-  const visibleCount=4; // количество видимых значений
+  const steps=50;
+  const visibleCount=4;
   let slotQueue=[];
   for(let i=0;i<steps;i++) slotQueue.push(slotValues[Math.floor(Math.random()*slotValues.length)]);
   const finalResult=slotValues[Math.floor(Math.random()*slotValues.length)];
-
   let frame=0;
+
   function animate(){
     ctx.fillStyle="#222";
     ctx.fillRect(rectX,rectY,rectW,rectH);
-
     ctx.font="28px Arial";
     ctx.fillStyle="#fff";
 
-    // Показываем только 3-4 следующих элементов
     for(let i=0;i<visibleCount;i++){
       const val=slotQueue[(frame+i)%slotQueue.length];
-      const yPos=rectY + 40 + i*30 - 10*Math.sin(frame/5); // небольшой 3D эффект (колебание)
+      const yPos=rectY + 40 + i*30 - 10*Math.sin(frame/5);
       ctx.fillText(val,rectX+80,yPos);
     }
 
     frame++;
-    if(frame<steps){
-      requestAnimationFrame(animate);
-    } else {
+    if(frame<steps) requestAnimationFrame(animate);
+    else{
       currentSlot[currentPlayer]=finalResult;
-      // применяем результат к позиции игрока
       if(finalResult==="+1 ход") playerPos[currentPlayer]++;
       if(finalResult==="+2 хода") playerPos[currentPlayer]+=2;
       if(finalResult==="-1 ход") playerPos[currentPlayer]--;
       if(finalResult==="-2 хода") playerPos[currentPlayer]-=2;
       if(finalResult==="Пропуск") skipTurn[currentPlayer]=true;
       if(playerPos[currentPlayer]<0) playerPos[currentPlayer]=0;
-      if(playerPos[currentPlayer]>=BOARD_SIZE-1){
+      if(playerPos[currentPlayer]>=TOTAL_CELLS-1){
         alert(`Игрок ${currentPlayer+1} победил!`);
         location.reload();
       }
