@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Монополия улитка + FINISH оптимизированный</title>
+<title>Монополия улитка + FINISH улучшенный</title>
 <style>
   body { margin: 0; background: #000; overflow: hidden; font-family: Arial; }
   canvas { display: block; }
@@ -27,7 +27,7 @@ let playerPos = [0,0,0,0];
 let currentPlayer = 0;
 let skipTurn = [false,false,false,false];
 const colors = ["green","red","blue","gold"];
-const PLAYER_RADIUS_RATIO = 0.15; // радиус игрока относительно клетки
+const PLAYER_RADIUS_RATIO = 0.15; // радиус относительно клетки
 
 // ---------- ПОЛЕ ----------
 const TOTAL_CELLS = 12; 
@@ -65,7 +65,6 @@ function generateSpiralCells(){
   const spiral = [];
   for(let i=0;i<TOTAL_CELLS;i++){
     spiral.push([x,y]);
-    // движение по спирали
     if(dx>0 && x+dx>maxX){ dx=0; dy=CELL_SIZE; maxX-=CELL_SIZE;}
     else if(dy>0 && y+dy>maxY){ dx=-CELL_SIZE; dy=0; maxY-=CELL_SIZE;}
     else if(dx<0 && x+dx<minX){ dx=0; dy=-CELL_SIZE; minX+=CELL_SIZE;}
@@ -86,17 +85,19 @@ function drawBoard(){
     ctx.fillStyle="#fff";
     ctx.fillText(i, c[0]+CELL_SIZE-22, c[1]+CELL_SIZE-10);
 
+    // ---------- игроки в клетке ----------
+    let playerSpacing = CELL_SIZE / (PLAYERS+1); // расстояние между игроками
     for(let p=0;p<PLAYERS;p++){
       if(playerPos[p]===i){
         ctx.fillStyle=colors[p];
-        const cx=c[0]+CELL_SIZE/2;
-        const cy=c[1]+CELL_SIZE/2;
+        const cx = c[0] + playerSpacing*(p+1);
+        const cy = c[1] + CELL_SIZE/2;
         const radius = CELL_SIZE * PLAYER_RADIUS_RATIO;
         ctx.beginPath();
         ctx.arc(cx, cy, radius,0,Math.PI*2);
         ctx.fill();
 
-        // ---------- номер игрока ----------
+        // номер игрока
         ctx.fillStyle="#fff";
         ctx.font=`${radius}px Arial`;
         ctx.textAlign="center";
@@ -106,25 +107,24 @@ function drawBoard(){
     }
   }
 
-  // ---------- FINISH клетка слева от квадрата, не вылезает ----------
+  // ---------- FINISH клетка слева от клетки 11 ----------
   if(Object.keys(finishCell).length===0){
-    const first = cells[0];
-    let fx = first[0]-CELL_SIZE-20;
-    let fy = first[1];
-    // проверяем, чтобы не выйти за экран слева
-    if(fx < 0) fx = 10;
-    finishCell = {x: fx, y: fy, w:CELL_SIZE, h:CELL_SIZE};
+    const last = cells[TOTAL_CELLS-1]; // клетка 11
+    let fx = last[0] - CELL_SIZE; 
+    if(fx < 10) fx = 10; // не вылезать за экран
+    let fy = last[1];
+    finishCell = {x:fx, y:fy, w:CELL_SIZE, h:CELL_SIZE};
   }
 
   ctx.fillStyle="yellow"; ctx.strokeStyle="#fff";
   drawRect(finishCell.x, finishCell.y, finishCell.w, finishCell.h, 8);
   ctx.fillStyle="#000"; ctx.font="20px Arial"; ctx.fillText("FINISH", finishCell.x+finishCell.w/4, finishCell.y+finishCell.h/2);
 
-  // ---------- Меньший красный флажок с черной ножкой ----------
+  // маленький красный флажок
   const flagX = finishCell.x + finishCell.w - 12;
   const flagY = finishCell.y + 5;
   ctx.fillStyle="black";
-  ctx.fillRect(flagX, flagY, 2, finishCell.h-10); // ножка
+  ctx.fillRect(flagX, flagY, 2, finishCell.h-10);
   ctx.fillStyle="red";
   ctx.beginPath();
   ctx.moveTo(flagX+1, flagY);
