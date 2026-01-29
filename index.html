@@ -16,6 +16,10 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// Фоновое изображение (можно заменить на свою картинку)
+const bgImage = new Image();
+bgImage.src = ""; // Например "background.jpg"
+
 // Авторазмер канваса
 function resize() {
   canvas.width = window.innerWidth;
@@ -47,7 +51,7 @@ const spinBtn = { w: 260, h: 70 };
 // ---------- ВСПОМОГАТЕЛЬНО ----------
 function drawRect(x,y,w,h,r=0){
   ctx.beginPath();
-  if (r>0) ctx.roundRect(x,y,w,h,r);
+  if (r>0 && ctx.roundRect) ctx.roundRect(x,y,w,h,r);
   else ctx.rect(x,y,w,h);
   ctx.fill();
   ctx.stroke();
@@ -60,13 +64,10 @@ function getBoardCells() {
 
   for (let i=0;i<cellsPerSide;i++)
     cells.push([MARGIN + i*CELL, canvas.height - MARGIN - CELL]);
-
   for (let i=1;i<cellsPerSide-1;i++)
     cells.push([MARGIN, canvas.height - MARGIN - CELL - i*CELL]);
-
   for (let i=0;i<cellsPerSide;i++)
     cells.push([MARGIN + i*CELL, canvas.height - MARGIN - CELL - (cellsPerSide-1)*CELL]);
-
   for (let i=1;i<cellsPerSide-1;i++)
     cells.push([MARGIN + (cellsPerSide-1)*CELL, canvas.height - MARGIN - CELL - (cellsPerSide-1-i)*CELL]);
 
@@ -134,23 +135,55 @@ function drawButton() {
   ctx.fillText("SPIN", spinBtn.x+85, spinBtn.y+45);
 }
 
+// ---------- Анимация слота сверху вниз ----------
 function animateSlot() {
-  const result = slotValues[Math.floor(Math.random()*slotValues.length)];
-  currentSlot[currentPlayer] = result;
+  const rectX = canvas.width - 360;
+  const rectY = 60 + currentPlayer*170;
+  const rectW = 300;
+  const rectH = 140;
 
-  if (result === "+1 ход") playerPos[currentPlayer]++;
-  if (result === "+2 хода") playerPos[currentPlayer]+=2;
-  if (result === "-1 ход") playerPos[currentPlayer]--;
-  if (result === "-2 хода") playerPos[currentPlayer]-=2;
-  if (result === "Пропуск") skipTurn[currentPlayer]=true;
+  const startTime = Date.now();
+  const duration = 1000; // 1 секунда анимации
+  const interval = 50;
 
-  if (playerPos[currentPlayer]<0) playerPos[currentPlayer]=0;
-  if (playerPos[currentPlayer]>=BOARD_SIZE-1) {
-    alert(`Игрок ${currentPlayer+1} победил!`);
-    location.reload();
-  }
+  const anim = setInterval(()=>{
+    const elapsed = Date.now() - startTime;
+    ctx.clearRect(rectX, rectY, rectW, rectH);
 
-  currentPlayer = (currentPlayer+1)%PLAYERS;
+    // Рисуем фон слота
+    ctx.fillStyle="#f5f5f5";
+    ctx.strokeStyle="#000";
+    drawRect(rectX, rectY, rectW, rectH,12);
+
+    ctx.fillStyle="#000";
+    ctx.font="28px Arial";
+
+    // Показываем случайный текст сверху вниз
+    const temp = slotValues[Math.floor(Math.random()*slotValues.length)];
+    const yOffset = (elapsed/interval % rectH) - 20;
+    ctx.fillText(temp, rectX+80, rectY + 80 + yOffset);
+
+    if (elapsed > duration) {
+      clearInterval(anim);
+      // Финальный результат
+      const result = slotValues[Math.floor(Math.random()*slotValues.length)];
+      currentSlot[currentPlayer] = result;
+
+      if (result === "+1 ход") playerPos[currentPlayer]++;
+      if (result === "+2 хода") playerPos[currentPlayer]+=2;
+      if (result === "-1 ход") playerPos[currentPlayer]--;
+      if (result === "-2 хода") playerPos[currentPlayer]-=2;
+      if (result === "Пропуск") skipTurn[currentPlayer]=true;
+
+      if (playerPos[currentPlayer]<0) playerPos[currentPlayer]=0;
+      if (playerPos[currentPlayer]>=BOARD_SIZE-1) {
+        alert(`Игрок ${currentPlayer+1} победил!`);
+        location.reload();
+      }
+
+      currentPlayer = (currentPlayer+1)%PLAYERS;
+    }
+  }, interval);
 }
 
 // ---------- Клик по кнопке ----------
@@ -159,10 +192,8 @@ canvas.addEventListener("click", e=>{
   const x = e.clientX - r.left;
   const y = e.clientY - r.top;
 
-  if (
-    x>spinBtn.x && x<spinBtn.x+spinBtn.w &&
-    y>spinBtn.y && y<spinBtn.y+spinBtn.h
-  ) {
+  if (x>spinBtn.x && x<spinBtn.x+spinBtn.w &&
+      y>spinBtn.y && y<spinBtn.y+spinBtn.h) {
     if (!skipTurn[currentPlayer]) animateSlot();
     else {
       skipTurn[currentPlayer]=false;
@@ -173,14 +204,14 @@ canvas.addEventListener("click", e=>{
 
 // ---------- Главный цикл ----------
 function loop() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(bgImage.src) ctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
   drawBoard();
   drawSlots();
   drawButton();
   requestAnimationFrame(loop);
 }
 loop();
-</script>
 
+</script>
 </body>
 </html>
